@@ -1,0 +1,14 @@
+{
+  "MergeVideo": {
+    "name": "短剧合并助手",
+    "description": "将短剧按集进行合并，将多个小视频合并为一个视频。",
+    "labels": "短剧,ffmpeg,视频合并",
+    "version": "0.1",
+    "icon": "mergevideo.png",
+    "author": "Mattoid",
+    "level": 1,
+    "history": {
+      "v1.0": "MoviePilot V2 版本站点数据统计插件"
+    }
+  }
+}
