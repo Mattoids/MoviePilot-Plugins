@@ -4,11 +4,13 @@ import subprocess
 
 from typing import Any, List, Dict, Tuple, Optional
 
+from app import schemas
 from app.core.config import settings
 from datetime import datetime, timedelta
 from app.core.event import eventmanager, Event
 from app.log import logger
 from app.plugins import _PluginBase
+from app.schemas import Response
 from app.schemas.types import EventType
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -83,63 +85,29 @@ class MergeVideo(_PluginBase):
                 except Exception as e:
                     logger.error(f"启动一次性 {self.plugin_name} 任务失败: {str(e)}")
 
-    def get_form(self) -> Tuple[Optional[List[dict]], Dict[str, Any]]:
-        return [
-            {
-                'component': 'VForm',
-                'content': [
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 3
-                                },
-                            }
-                        ]
-                    }
-                ]
-            }
-        ], {
-            "enabled": False,
-            "notify": True,
-            "cron": "",
-            "auto_cf": 0,
-            "onlyonce": False,
-            "clean": False,
-            "queue_cnt": 5,
-            "sign_sites": [],
-            "login_sites": [],
-            "retry_keyword": "错误|失败"
-        }
+    def get_render_mode(self) -> Tuple[str, str]:
+        """
+        获取插件渲染模式
+        :return: 1、渲染模式，支持：vue/vuetify，默认vuetify
+        :return: 2、组件路径，默认 dist/assets
+        """
+        return "vue", "dist/assets"
+
+    def get_form(self) -> Tuple[List[dict], Dict[str, Any]]:
+        """
+        拼装插件配置页面，需要返回两块数据：1、页面配置；2、数据结构
+        """
+        return [], {}
 
     def get_page(self) -> List[dict]:
-        return [{"component": "VRow", "content": self.__get_detail_report()}]
+        return []
 
-    def __get_detail_report(self):
-        history_data = self._load_history()
-        if not history_data:
-            return [
-                {
-                    "component": "div",
-                    "text": "暂无数据",
-                    "props": {
-                        "class": "text-center",
-                    },
-                }
-            ]
-
-    def _load_history(self) -> List[Dict[str, Any]]:
-        history = self.get_data('merge_history')
-        if history is None:
-            return []
-        if not isinstance(history, list):
-            logger.error(f"{self.plugin_name} 历史记录数据格式不正确 (期望列表，得到 {type(history)})。将返回空历史。")
-            return []
-        return history
-
+    def _load_history(self) -> list[dict[str, str]]:
+        return [{
+            'title': '你好，李焕英！',
+            'type': 'success',
+            'time': '2025-06-20 10:00:00'
+        }]
 
     def __update_config(self):
         self.update_config({
@@ -147,6 +115,21 @@ class MergeVideo(_PluginBase):
             "cron": self._cron,
             "clear_history": self._clear_history,  # 新增：清理历史记录开关
         })
+
+    def get_state(self) -> bool:
+        return self._enabled
+
+    def get_api(self) -> List[Dict[str, Any]]:
+        return [
+            {
+                "path": "/history",
+                "endpoint": self._load_history,
+                "methods": ["GET"],
+                "summary": "获取历史记录",
+                "description": "获取合并历史，可重新整理或删除记录",
+                "auth": "bear",
+            },
+        ]
 
     def get_command(self) -> List[Dict[str, Any]]:
         return [{
@@ -161,20 +144,7 @@ class MergeVideo(_PluginBase):
 
     @eventmanager.register(EventType.PluginAction)
     def command_action(self, event: Event):
-        """
-            远程命令响应
-            """
-        event_data = event.event_data
-        if not event_data or event_data.get("action") != "interactive_demo":
-            return
-
-        # 获取用户信息
-        channel = event_data.get("channel")
-        source = event_data.get("source")
-        user = event_data.get("user")
-
-        # 发送带有交互按钮的消息
-        self._send_main_menu(channel, source, user)
+        pass
 
     def _send_main_menu(self, channel, source, userid, original_message_id=None, original_chat_id=None):
         """
